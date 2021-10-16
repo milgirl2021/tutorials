@@ -56,7 +56,6 @@ struct headers {
 *********************** P A R S E R  ***********************************
 *************************************************************************/
 
-// TODO: Update the parser to parse the myTunnel header as well
 parser MyParser(packet_in packet,
                 out headers hdr,
                 inout metadata meta,
@@ -73,6 +72,14 @@ parser MyParser(packet_in packet,
             default : accept;
         }
     }
+    
+    state parse_myTunnel {
+        packet.extract(hdr.myTunnel);
+        transition select(hdr.myTunnel.proto_id) {
+            TYPE_IPV4 : parse_ipv4;
+            default : accept;
+	 }
+     }
 
     state parse_ipv4 {
         packet.extract(hdr.ipv4);
@@ -123,6 +130,9 @@ control MyIngress(inout headers hdr,
     }
 
     // TODO: declare a new action: myTunnel_forward(egressSpec_t port)
+    myTunnel_forward(egressSpec_t port){ 
+    standard_metadata.egress_spec = port;
+} 
 
 
     // TODO: declare a new table: myTunnel_exact
@@ -131,7 +141,7 @@ control MyIngress(inout headers hdr,
 
     apply {
         // TODO: Update control flow
-        if (hdr.ipv4.isValid()) {
+        if (hdr.ipv4.isValid() && !hdr.myTunnel.isValid()) {
             ipv4_lpm.apply();
         }
     }
